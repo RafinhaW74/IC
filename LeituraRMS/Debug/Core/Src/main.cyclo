@@ -1,5 +1,5 @@
 ../Core/Src/main.c:65:6:ler_sensor	2
 ../Core/Src/main.c:74:7:converte_RMS	2
-../Core/Src/main.c:93:5:main	2
-../Core/Src/main.c:161:6:SystemClock_Config	3
-../Core/Src/main.c:210:6:Error_Handler	1
+../Core/Src/main.c:92:5:main	1
+../Core/Src/main.c:160:6:SystemClock_Config	3
+../Core/Src/main.c:209:6:Error_Handler	1

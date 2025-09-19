@@ -37,7 +37,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define amostras 2048
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,11 +59,11 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-float analogico[1024]; //alterar para 256 quando for usar normal
+float analogico[amostras]; //alterar para 256 quando for usar normal
 
 
 void ler_sensor(void){
-	for(int i=0; i<256; i++){
+	for(int i=0; i<amostras; i++){
 		HAL_ADC_Start(&hadc1);
 		HAL_ADC_PollForConversion(&hadc1, 100);
 		analogico[i] = HAL_ADC_GetValue(&hadc1);
@@ -73,15 +73,14 @@ void ler_sensor(void){
 
 float converte_RMS(void){
 	float v_adc= 0.0, acc=0.0, media=0.0, rms=0.0;
-	for(int i = 0; i<256; i++){
+	for(int i = 0; i<amostras; i++){
 		v_adc = ((float)analogico[i]) * 3.3/4096.0;
 		acc += pow(v_adc - (3.3/2), 2);
 	}
 
-	media = acc/256;
+	media = acc/amostras;
 	rms = sqrt(media);
-	return rms * 518.0;//valor de 519.3 encontrado sabendo a RMS real da rede e verificando os valores retornados pelo sensor, aplicando assim a média sobre esses valores e usando regra de 3 para encontrar o fator de correção
-
+	return rms * 778;
 }
 
 /* USER CODE END 0 */
@@ -127,7 +126,7 @@ int main(void)
   while (1)
   {
 	  //codigo usado com as conversoes
-	  /*
+
 	  ler_sensor();
 	  rms = converte_RMS();
 	  char buffer[50];
@@ -135,18 +134,18 @@ int main(void)
 	  // Envia a mensagem pela USB CDC
 	  CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
 	  HAL_Delay(1000);
-	  */
 
+	   /*
 
 	  //feito para ler no matlab
 	  	ler_sensor();
 		char buffer[20];
-		for (int i = 0; i < 1024; i++) {
+		for (int i = 0; i < amostras; i++) {
 			sprintf(buffer, "%d\n", (int)analogico[i]);
 			CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
 		}
 		HAL_Delay(100);
-
+	   	   */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
