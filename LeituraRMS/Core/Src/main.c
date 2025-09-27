@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "tim.h"
 #include "usb_device.h"
 #include "gpio.h"
 
@@ -28,6 +29,7 @@
 #include "stdio.h"
 #include "math.h"
 #include "string.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +48,9 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+volatile uint16_t indice = 0;
+float analogico[amostras];
+volatile bool pronto = false;
 
 /* USER CODE BEGIN PV */
 
@@ -59,18 +64,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-float analogico[amostras]; //alterar para 256 quando for usar normal
-
-
-void ler_sensor(void){
-	for(int i=0; i<amostras; i++){
-		HAL_ADC_Start(&hadc1);
-		HAL_ADC_PollForConversion(&hadc1, 100);
-		analogico[i] = HAL_ADC_GetValue(&hadc1);
-		HAL_ADC_Stop(&hadc1);
-	}
-}
-
 float converte_RMS(void){
 	float v_adc= 0.0, acc=0.0, media=0.0, rms=0.0;
 	for(int i = 0; i<amostras; i++){
@@ -82,6 +75,39 @@ float converte_RMS(void){
 	rms = sqrt(media);
 	return rms * 778;
 }
+/////////////////////////////INTERRUPÇÃO DO TIMER2///////////////////////////////////
+/*
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+    if (htim->Instance == TIM2) {
+        if(indice < amostras){
+        	HAL_ADC_Start(&hadc1);
+			HAL_ADC_PollForConversion(&hadc1, 1);
+			analogico[indice] = HAL_ADC_GetValue(&hadc1);
+			HAL_ADC_Stop(&hadc1);
+			indice++;
+        }else{
+        	pronto = true;
+        	HAL_TIM_Base_Stop_IT(&htim2);
+        }
+    }
+
+}
+*/
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+    if (hadc->Instance == ADC1) {
+        analogico[indice++] = HAL_ADC_GetValue(hadc);
+        if (indice >= amostras) {
+            pronto = true;
+            indice = 0;
+        }
+    }
+}
+
+
+
+
+
 
 /* USER CODE END 0 */
 
@@ -116,36 +142,35 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  float rms=0.0;
-
+  HAL_ADC_Start_IT(&hadc1);
+  HAL_TIM_Base_Start(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  //codigo usado com as conversoes
+  while (1){
 
-	  ler_sensor();
-	  rms = converte_RMS();
-	  char buffer[50];
-	  sprintf(buffer, "Valor = %f \n", rms);
-	  // Envia a mensagem pela USB CDC
-	  CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
-	  HAL_Delay(1000);
 
-	   /*
+//////////////////////VER GRÁFICO MATLAB////////////////////////////////////
+/*
+	ler_sensor();
+	char buffer[20];
+	for (int i = 0; i < amostras; i++) {
+		sprintf(buffer, "%d\n", (int)analogico[i]);
+		CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+	}
+*/
 
-	  //feito para ler no matlab
-	  	ler_sensor();
-		char buffer[20];
-		for (int i = 0; i < amostras; i++) {
-			sprintf(buffer, "%d\n", (int)analogico[i]);
-			CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
-		}
-		HAL_Delay(100);
-	   	   */
+	if (pronto) {
+		float rms = converte_RMS();
+		char buffer[50];
+		sprintf(buffer, "Valor = %f \n", rms);
+		CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+		pronto = false;
+	}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
