@@ -155,14 +155,16 @@ int main(void)
 
 //////////////////////VER GRÁFICO MATLAB////////////////////////////////////
 /*
-	ler_sensor();
-	char buffer[20];
-	for (int i = 0; i < amostras; i++) {
-		sprintf(buffer, "%d\n", (int)analogico[i]);
-		CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+	if(pronto) {
+		char buffer[20];
+		for (int i = 0; i < amostras; i++) {
+			sprintf(buffer, "%d\n", (int)analogico[i]);
+			CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+		}
 	}
-*/
 
+*/
+//////////////////////VER RMS CONVERTIDA////////////////////////////////////
 	if (pronto) {
 		float rms = converte_RMS();
 		char buffer[50];
