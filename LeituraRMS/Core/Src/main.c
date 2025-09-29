@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "tim.h"
 #include "usb_device.h"
 #include "gpio.h"
@@ -39,7 +40,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define amostras 2048
+#define AMOSTRAS 2048
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,12 +49,10 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-volatile uint16_t indice = 0;
-float analogico[amostras];
-volatile bool pronto = false;
 
 /* USER CODE BEGIN PV */
-
+uint16_t analogico[AMOSTRAS];
+volatile bool pronto = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,43 +63,26 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-float converte_RMS(void){
-	float v_adc= 0.0, acc=0.0, media=0.0, rms=0.0;
-	for(int i = 0; i<amostras; i++){
-		v_adc = ((float)analogico[i]) * 3.3/4096.0;
-		acc += pow(v_adc - (3.3/2), 2);
-	}
+float converte_RMS(uint16_t *dados, uint32_t tamanho) {
+    const float vref = 3.3f;
+    const float v_offset = vref / 2.0f;
+    const float adc_scale = vref / 4095.0f;
+    float acc = 0.0f;
 
-	media = acc/amostras;
-	rms = sqrt(media);
-	return rms * 778;
-}
-/////////////////////////////INTERRUPÇÃO DO TIMER2///////////////////////////////////
-/*
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-    if (htim->Instance == TIM2) {
-        if(indice < amostras){
-        	HAL_ADC_Start(&hadc1);
-			HAL_ADC_PollForConversion(&hadc1, 1);
-			analogico[indice] = HAL_ADC_GetValue(&hadc1);
-			HAL_ADC_Stop(&hadc1);
-			indice++;
-        }else{
-        	pronto = true;
-        	HAL_TIM_Base_Stop_IT(&htim2);
-        }
+    for (uint32_t i = 0; i < tamanho; i++) {
+        float v_adc = dados[i] * adc_scale;
+        float diff = v_adc - v_offset;
+        acc += diff * diff;
     }
 
+    float media = acc / (float)tamanho;
+    float rms = sqrtf(media);
+    return rms * 778.0f;
 }
-*/
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if (hadc->Instance == ADC1) {
-        analogico[indice++] = HAL_ADC_GetValue(hadc);
-        if (indice >= amostras) {
-            pronto = true;
-            indice = 0;
-        }
+    	pronto = true;
     }
 }
 
@@ -140,34 +122,22 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_USB_DEVICE_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_ADC_Start_IT(&hadc1);
   HAL_TIM_Base_Start(&htim2);
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)analogico, AMOSTRAS);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1){
-
-
-//////////////////////VER GRÁFICO MATLAB////////////////////////////////////
-/*
-	if(pronto) {
-		char buffer[20];
-		for (int i = 0; i < amostras; i++) {
-			sprintf(buffer, "%d\n", (int)analogico[i]);
-			CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
-		}
-	}
-
-*/
 //////////////////////VER RMS CONVERTIDA////////////////////////////////////
 	if (pronto) {
-		float rms = converte_RMS();
-		char buffer[50];
+		float rms = converte_RMS(analogico, AMOSTRAS);
+		char buffer[64];
 		sprintf(buffer, "Valor = %f \n", rms);
 		CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
 		pronto = false;
