@@ -86,11 +86,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     }
 }
 
-
-
-
-
-
 /* USER CODE END 0 */
 
 /**
@@ -136,10 +131,18 @@ int main(void)
   while (1){
 //////////////////////VER RMS CONVERTIDA////////////////////////////////////
 	if (pronto) {
-		float rms = converte_RMS(analogico, AMOSTRAS);
+/*
 		char buffer[64];
+		float rms = converte_RMS(analogico, AMOSTRAS);
 		sprintf(buffer, "Valor = %f \n", rms);
 		CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+*/
+		char buffer[2048];
+		for (int i = 0; i < AMOSTRAS; i++) {
+			sprintf(buffer, "%d\n", (int)analogico[i]);
+			CDC_Transmit_FS((uint8_t*)buffer, strlen(buffer));
+		}
+
 		pronto = false;
 	}
 
