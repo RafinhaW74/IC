@@ -10,7 +10,6 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 # ==========================================
 # 1. CARREGAMENTO DOS DADOS
 # ==========================================
-# Substitua pelo caminho onde você salvou o seu CSV
 caminho_csv = r'C:\Users\rafin\OneDrive\Área de Trabalho\IC_offline\Dataset_Motores_ARX.csv'
 
 print("Carregando o dataset...")
